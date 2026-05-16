@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bookstore</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+        color: #1a1a1a;
+        min-height: 100vh;
+        padding: 2rem 1rem;
+      }
+
+      .container {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+      }
+
+      .search-row {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+
+      #search-input {
+        flex: 1;
+        padding: 0.6rem 0.8rem;
+        font-size: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+
+      #search-btn {
+        padding: 0.6rem 1.2rem;
+        font-size: 1rem;
+        background: #1a1a1a;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      #search-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+      #status {
+        font-size: 0.9rem;
+        color: #666;
+        min-height: 1.4rem;
+        margin-bottom: 0.5rem;
+      }
+
+      #status.error { color: #c00; }
+
+      #results { list-style: none; }
+
+      .result-item {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .result-title { font-weight: 600; margin-bottom: 0.25rem; word-break: break-word; }
+      .result-meta { font-size: 0.85rem; color: #555; margin-bottom: 0.6rem; }
+
+      .dl-btn {
+        font-size: 0.85rem;
+        padding: 0.35rem 0.8rem;
+        background: #1a1a1a;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .dl-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+      .dl-status {
+        font-size: 0.82rem;
+        margin-top: 0.4rem;
+      }
+
+      .dl-status.ok { color: #0a7; }
+      .dl-status.err { color: #c00; }
+
+      .tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .tab-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.95rem;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        cursor: pointer;
+        color: #666;
+      }
+
+      .tab-btn.active {
+        color: #1a1a1a;
+        font-weight: 600;
+        border-bottom-color: #1a1a1a;
+      }
+
+      .view { display: none; }
+      .view.active { display: block; }
+
+      .lib-item {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 0.8rem 1rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .lib-name-row { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem; }
+      .lib-name { font-size: 0.9rem; word-break: break-all; }
+      .rename-btn {
+        font-size: 0.75rem;
+        padding: 0.1rem 0.3rem;
+        background: none;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        cursor: pointer;
+        color: #666;
+        flex-shrink: 0;
+      }
+      .rename-btn:hover { border-color: #999; color: #333; }
+      .lib-rename-form { display: flex; gap: 0.3rem; align-items: center; margin-bottom: 0.3rem; }
+      .rename-input {
+        flex: 1;
+        font-size: 0.85rem;
+        padding: 0.2rem 0.4rem;
+        border: 1px solid #aaa;
+        border-radius: 3px;
+      }
+      .rename-confirm-btn {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.5rem;
+        background: #1a1a1a;
+        color: #fff;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .rename-cancel-btn {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.5rem;
+        background: none;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .rename-confirm-btn:disabled, .rename-cancel-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+      .lib-meta { font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; }
+
+      .lib-actions { display: flex; gap: 0.4rem; margin-bottom: 0.3rem; }
+
+      .sync-btn {
+        font-size: 0.78rem;
+        padding: 0.2rem 0.6rem;
+        background: #555;
+        color: #fff;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .sync-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+      .delete-btn {
+        font-size: 0.78rem;
+        padding: 0.2rem 0.6rem;
+        background: #c00;
+        color: #fff;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .delete-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+      .lib-action-status { font-size: 0.8rem; }
+      .lib-action-status.ok { color: #0a7; }
+      .lib-action-status.err { color: #c00; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Bookstore</h1>
+
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="search">Search</button>
+        <button class="tab-btn" data-tab="library">Library</button>
+      </div>
+
+      <div id="view-search" class="view active">
+        <div class="search-row">
+          <input
+            id="search-input"
+            type="text"
+            placeholder="Book title or author…"
+            autocomplete="off"
+          />
+          <button id="search-btn">Search</button>
+        </div>
+        <div id="status"></div>
+        <ul id="results"></ul>
+      </div>
+
+      <div id="view-library" class="view">
+        <div id="lib-status" style="font-size:0.9rem;color:#666;margin-bottom:0.75rem;"></div>
+        <div id="lib-list"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
