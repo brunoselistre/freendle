@@ -16,6 +16,7 @@ import logging
 import re
 from typing import Callable, Awaitable
 from typing import Literal
+from urllib.parse import urlparse
 
 from playwright.async_api import async_playwright
 
@@ -44,10 +45,13 @@ SEL_SLOW_DOWNLOAD_CANDIDATES = [
 ]
 LINK_TIMEOUT_S = 30
 
-_FILE_URL_RE = re.compile(r"^https?://\S+$")
+_FILE_URL_RE = re.compile(r"^https://\S+$")  # https only — blocks http/file/internal
 
 ANNAS_BASE = "https://annas-archive.gl"
 FALLBACK_ORDER: list[BookFormat] = ["pdf", "epub", "azw3"]
+
+# Allowed annas-archive hostnames — guards detail_url validation
+_ANNAS_HOST_RE = re.compile(r"^annas-archive\.(gl|org|se|st)$")
 
 _STEALTH_UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -183,8 +187,9 @@ async def get_download_url(md5: str, detail_url: str, emit: Emitter | None = Non
     Each slow_download link gets LINK_TIMEOUT_S seconds before moving on.
     Security: validates domain and md5/URL consistency before navigating.
     """
-    if not detail_url.startswith(f"{ANNAS_BASE}/") and not detail_url.startswith("https://annas-archive."):
-        raise ValueError(f"detail_url domain mismatch — must be annas-archive.gl, got {detail_url!r}")
+    host = urlparse(detail_url).hostname or ""
+    if not _ANNAS_HOST_RE.match(host):
+        raise ValueError(f"detail_url host not in allowed list, got {host!r}")
 
     url_md5_match = re.search(r"/md5/([a-fA-F0-9]+)", detail_url)
     if not url_md5_match or url_md5_match.group(1).lower() != md5.lower():
