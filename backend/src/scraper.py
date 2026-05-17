@@ -12,10 +12,11 @@ Download panel selector (detail page):
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
+import time
 from typing import Callable, Awaitable
-from typing import Literal
 from urllib.parse import urlparse
 
 from playwright.async_api import async_playwright
@@ -99,7 +100,7 @@ async def search_books(query: str, ext: str) -> list[dict]:
             logger.info("[scraper] page loaded | title=%r", page_title)
 
             logger.info("[scraper] waiting for selector %r", SEL_RESULT_ROW)
-            await page.wait_for_selector(SEL_RESULT_ROW, timeout=4500)
+            await page.wait_for_selector(SEL_RESULT_ROW, state="attached", timeout=4500)
             rows = await page.query_selector_all(SEL_RESULT_ROW)
             logger.info("[scraper] found %d result rows", len(rows))
 
@@ -273,20 +274,19 @@ async def _try_link(
     total: int,
     emit: Emitter,
 ) -> str | None:
-    import asyncio
-    import time
-
-    # "commit" returns as soon as headers arrive — avoids blocking on open connections
-    response = await page.goto(href, wait_until="commit")
+    try:
+        response = await page.goto(href, wait_until="commit")
+    except Exception as exc:
+        logger.warning("[scraper] link %d/%d goto failed | %s: %s", link_n, total, type(exc).__name__, exc)
+        return None
     await asyncio.sleep(1)
 
-    # Log what we got back
     if response:
         ct = response.headers.get("content-type", "")
         cd = response.headers.get("content-disposition", "")
         status = response.status
         logger.info("[scraper] link %d/%d response | status=%d ct=%r cd=%r url=%s", link_n, total, status, ct, cd, response.url)
-        if "text/html" not in ct or "attachment" in cd:
+        if "text/html" not in ct and "attachment" not in cd:
             final_url = str(response.url)
             logger.info("[scraper] link %d/%d direct file response", link_n, total)
             return final_url
@@ -295,21 +295,27 @@ async def _try_link(
 
     deadline = time.monotonic() + LINK_TIMEOUT_S
     while time.monotonic() < deadline:
-        for sel in SEL_SLOW_DOWNLOAD_CANDIDATES:
-            real_el = await page.query_selector(sel)
-            if real_el:
-                href_attr = await real_el.get_attribute("href") or ""
-                if href_attr.startswith("/"):
-                    href_attr = f"https://annas-archive.gl{href_attr}"
-                if _FILE_URL_RE.match(href_attr):
-                    logger.info("[scraper] link %d/%d real_url=%s (sel=%r)", link_n, total, href_attr, sel)
-                    return href_attr
+        try:
+            for sel in SEL_SLOW_DOWNLOAD_CANDIDATES:
+                real_el = await page.query_selector(sel)
+                if real_el:
+                    href_attr = await real_el.get_attribute("href") or ""
+                    if href_attr.startswith("/"):
+                        href_attr = f"https://annas-archive.gl{href_attr}"
+                    if _FILE_URL_RE.match(href_attr):
+                        logger.info("[scraper] link %d/%d real_url=%s (sel=%r)", link_n, total, href_attr, sel)
+                        return href_attr
+        except Exception as exc:
+            logger.warning("[scraper] link %d/%d context error | %s: %s", link_n, total, type(exc).__name__, exc)
         elapsed = int(LINK_TIMEOUT_S - (deadline - time.monotonic()))
         await emit(f"Link {link_n}/{total}: waiting… {elapsed}s / {LINK_TIMEOUT_S}s")
         await asyncio.sleep(1)
 
     # Log page state so we can improve selectors
-    current_url = page.url
+    try:
+        current_url = page.url
+    except Exception:
+        current_url = "<unavailable>"
     try:
         html = (await page.content())[:2000]
     except Exception as e:
@@ -319,5 +325,8 @@ async def _try_link(
         link_n, total, current_url, html,
     )
     await emit(f"Link {link_n}/{total}: timed out, trying next…")
-    await page.goto(detail_url, wait_until="domcontentloaded")
+    try:
+        await page.goto(detail_url, wait_until="domcontentloaded")
+    except Exception as exc:
+        logger.warning("[scraper] link %d/%d failed to return to detail page | %s: %s", link_n, total, type(exc).__name__, exc)
     return None

@@ -1,0 +1,36 @@
+# Downloads and library (user data)
+downloads/
+
+# Python
+backend/.venv/
+backend/venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+dist/
+build/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Gmail OAuth credentials (never commit)
+gmail_credentials.json
+gmail_token.json
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+
+# Knowledge graph (generated)
+graphify-out/
