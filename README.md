@@ -1,12 +1,13 @@
-# Book Scraper
+# Freendle
 
-A minimal web application to search for books on [Anna's Archive](https://annas-archive.org), download them, and catalog them via the Calibre CLI.
+A minimal web application to search for books on [Anna's Archive](https://annas-archive.org), download them, and catalog them via the Calibre CLI. 
+Books saved to your library can be sent to your kindle via e-mail.
 
 The app features a lightweight, single-page frontend and a Python backend that handles scraping and downloading.
 
 ## Features
 
-- **Search**: Look up books by title with prioritized format fallback (`azw3` → `pdf` → `epub`).
+- **Search**: Look up books by title with prioritized format fallback (`pdf` → `epub` → `azw3`).
 - **Scrape**: Handles JavaScript-rendered pages using Playwright.
 - **Download**: Securely downloads files to an isolated sandbox directory.
 - **Catalog**: Integrates with the Calibre CLI to manage your book collection.
@@ -58,7 +59,7 @@ The app features a lightweight, single-page frontend and a Python backend that h
 
 ```bash
 git clone <repository-url>
-cd bookstore
+cd freendle
 ```
 
 ### 2. Environment Configuration
@@ -73,19 +74,50 @@ Edit `.env` to set your credentials and paths:
 
 ```env
 # Required
-BOOKSTORE_DOWNLOAD_DIR=/app/downloads
+FREENDLE_DOWNLOAD_DIR=/app/downloads
 
 # Optional: For Gmail integration (to send books to Kindle)
-BOOKSTORE_KINDLE_EMAIL=your-kindle@kindle.com
-BOOKSTORE_GMAIL_SENDER=you@gmail.com
-BOOKSTORE_GMAIL_CREDENTIALS_PATH=/app/gmail_credentials.json
-BOOKSTORE_GMAIL_TOKEN_PATH=/app/gmail_token.json
+FREENDLE_KINDLE_EMAIL=your-kindle@kindle.com
+FREENDLE_GMAIL_SENDER=you@gmail.com
+FREENDLE_GMAIL_CREDENTIALS_PATH=/app/gmail_credentials.json
+FREENDLE_GMAIL_TOKEN_PATH=/app/gmail_token.json
 
 # CORS (default allows all)
-BOOKSTORE_BACKEND_CORS_ORIGINS=[]
+FREENDLE_BACKEND_CORS_ORIGINS=[]
 ```
 
-### 3. Run with Docker
+### 3. Google Credentials (for Kindle Sync)
+
+> **Note:** Email sending currently only supports Gmail accounts.
+
+To send downloaded books to your Kindle via email, you must authenticate with Gmail using OAuth 2.0. This is a one-time setup:
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a **new project** (or select an existing one).
+3. Enable the **Gmail API**:
+   - Navigate to **APIs & Services → Library**.
+   - Search for "Gmail API" and click **Enable**.
+4. Configure the **OAuth consent screen**:
+   - Go to **APIs & Services → OAuth consent screen**.
+   - Select **External** and complete the required fields.
+   - Under **Test users**, add the Gmail address you intend to use.
+5. Create **OAuth 2.0 credentials**:
+   - Go to **APIs & Services → Credentials → Create Credentials → OAuth client ID**.
+   - For **Application type**, select **Desktop app**.
+   - Download the JSON file.
+6. Place the downloaded file in the project root and rename it to `gmail_credentials.json`.
+7. Generate the access token:
+   ```bash
+   python backend/scripts/gmail_oauth_init.py
+   ```
+   - Open the provided URL in your browser.
+   - Sign in with your Gmail account and grant permission.
+   - Paste the authorization code back into the terminal.
+   - The script creates `gmail_token.json` in the project root.
+
+If you are running with Docker, ensure the credential files are mounted or copied into the container at the paths specified in your `.env` file (e.g., `/app/gmail_credentials.json` and `/app/gmail_token.json`).
+
+### 4. Run with Docker
 
 The simplest way to get started is using Docker Compose:
 
@@ -95,7 +127,7 @@ docker-compose up --build
 
 The application will be available at `http://localhost:8000`.
 
-### 4. Run Locally (Development)
+### 5. Run Locally (Development)
 
 #### Backend
 
@@ -159,13 +191,13 @@ The included `Dockerfile` is optimized for production with a multi-stage build t
 Build the production image:
 
 ```bash
-docker build -t bookstore:latest .
+docker build -t freendle:latest .
 ```
 
 Run the container:
 
 ```bash
-docker run -p 8000:8000 --env-file .env bookstore:latest
+docker run -p 8000:8000 --env-file .env freendle:latest
 ```
 
 ## License
