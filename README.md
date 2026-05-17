@@ -86,7 +86,16 @@ FREENDLE_GMAIL_TOKEN_PATH=/app/gmail_token.json
 FREENDLE_BACKEND_CORS_ORIGINS=[]
 ```
 
-### 3. Google Credentials (for Kindle Sync)
+### 3. Kindle Email Setup
+
+To set up and use Kindle email transfer, you must first locate your device-specific address and authorize your sender email within your Amazon account settings.
+
+#### Locating and Authorizing Your Send-to-Kindle Email
+
+1. **Find your Kindle Email**: Log in to Amazon, go to [Manage Your Content and Devices](https://www.amazon.com/mn/dcw/myx.html), select the **Devices** tab, and click on your specific Kindle or app. Your unique email address (ending in `@kindle.com`) will be displayed.
+2. **Approve Senders**: In the same settings area, scroll to **Personal Document Settings** and click **Add a new approved e-mail address**. Enter the email address you will use to send the books. Amazon only accepts files from addresses on this whitelist to prevent spam.
+
+### 4. Google Credentials (for Kindle Sync)
 
 > **Note:** Email sending currently only supports Gmail accounts.
 
@@ -117,7 +126,7 @@ To send downloaded books to your Kindle via email, you must authenticate with Gm
 
 If you are running with Docker, ensure the credential files are mounted or copied into the container at the paths specified in your `.env` file (e.g., `/app/gmail_credentials.json` and `/app/gmail_token.json`).
 
-### 4. Run with Docker
+### 5. Run with Docker
 
 The simplest way to get started is using Docker Compose:
 
@@ -127,7 +136,7 @@ docker-compose up --build
 
 The application will be available at `http://localhost:8000`.
 
-### 5. Run Locally (Development)
+### 6. Run Locally (Development)
 
 #### Backend
 
